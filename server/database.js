@@ -41,6 +41,26 @@ const Question = sequelize.define('Question', {
     }
 });
 
+const User = sequelize.define('User', {
+    username: {
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: false,
+    },
+    password: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    fullName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    role: {
+        type: DataTypes.ENUM('admin', 'student'),
+        defaultValue: 'student',
+    },
+});
+
 const Option = sequelize.define('Option', {
     text: {
         type: DataTypes.TEXT,
@@ -64,4 +84,4 @@ Option.belongsTo(Question, { foreignKey: 'questionId' });
 Question.hasMany(Statement, { as: 'statements', foreignKey: 'questionId', onDelete: 'CASCADE' });
 Statement.belongsTo(Question, { foreignKey: 'questionId' });
 
-module.exports = { sequelize, Question, Option, Statement };
+module.exports = { sequelize, Question, Option, Statement, User };

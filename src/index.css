@@ -1330,3 +1330,24 @@ footer {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Safety for Admin Preview Visibility */
+.admin-preview, 
+.admin-preview .question-text, 
+.admin-preview .question-top-text,
+.admin-preview .formatted-text,
+.admin-preview li,
+.admin-preview td,
+.admin-preview span {
+  color: #333333 !important;
+}
+
+.admin-preview .option-item:not(.selected) {
+    color: #333333 !important;
+}
+
+/* Ensure math is also visible */
+.admin-preview .katex {
+    color: #333333 !important;
+}
+

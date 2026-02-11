@@ -2,129 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './index.css';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
+import AdminApp from './admin/AdminApp';
+import QuestionCard from './components/QuestionCard';
 
-// Helper component to render text with Math and Tables
-const MathText = ({ text }) => {
-  if (!text) return null;
-
-  // Check if text contains a markdown table
-  if (text.includes('|') && text.includes('--')) {
-    const segments = [];
-    const lines = text.split('\n');
-    let currentTable = null;
-
-    lines.forEach((line, idx) => {
-      const trimmedLine = line.trim();
-      if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
-        if (!currentTable) {
-          currentTable = [];
-        }
-        currentTable.push(trimmedLine);
-      } else {
-        if (currentTable) {
-          segments.push({ type: 'table', rows: currentTable });
-          currentTable = null;
-        }
-        segments.push({ type: 'text', content: line });
-      }
-    });
-    if (currentTable) {
-      segments.push({ type: 'table', rows: currentTable });
-    }
-
-    return (
-      <div className="formatted-text">
-        {segments.map((seg, segIdx) => {
-          if (seg.type === 'table') {
-            // Filter out common markdown table separator lines (e.g. |---| or |:---|)
-            const tableRows = seg.rows.filter(row => !row.match(/^\|[\s\-\|:]+\|$/));
-            if (tableRows.length === 0) return null;
-
-            return (
-              <table key={segIdx} className="content-table">
-                <thead>
-                  <tr>
-                    {tableRows[0].split('|')
-                      .filter((cell, i, arr) => i > 0 && i < arr.length - 1)
-                      .map((cell, cellIdx) => (
-                        <th key={cellIdx}><MathTextContent text={cell.trim()} /></th>
-                      ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableRows.slice(1).map((row, rowIdx) => (
-                    <tr key={rowIdx}>
-                      {row.split('|')
-                        .filter((cell, i, arr) => i > 0 && i < arr.length - 1)
-                        .map((cell, cellIdx) => (
-                          <td key={cellIdx}><MathTextContent text={cell.trim()} /></td>
-                        ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            );
-          }
-          return (
-            <div key={segIdx} className="text-segment">
-              {seg.content.split('\n').map((line, lIdx) => {
-                const isBullet = line.trim().startsWith('•') || line.trim().startsWith('- ') || line.trim().startsWith('* ');
-                return (
-                  <div
-                    key={lIdx}
-                    className={isBullet ? 'bullet-line' : 'content-line'}
-                    style={{ minHeight: line.trim() === '' ? '0.8em' : 'auto' }}
-                  >
-                    <MathTextContent text={line} />
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  return <MathTextContent text={text} />;
-};
-
-const MathTextContent = ({ text }) => {
-  if (!text) return null;
-  // Split by Math ($...$), Inline Image ([gambar: ...]), Bold (**...**), or Italic (_..._)
-  const parts = text.split(/(\$.*?\$|\[gambar:.*?\]|\*\*.*?\*\*|_.*?_)/g);
-  return (
-    <span>
-      {parts.map((part, i) => {
-        if (part.startsWith('$') && part.endsWith('$')) {
-          const math = part.slice(1, -1);
-          return <InlineMath key={i} math={math} />;
-        }
-        if (part.startsWith('[gambar:') && part.endsWith(']')) {
-          const content = part.match(/\[gambar:\s*(.*?)\s*\]/)[1];
-          const [imageName, size] = content.split('|').map(s => s.trim());
-          return (
-            <img
-              key={i}
-              src={`/image/${imageName}`}
-              alt="inline"
-              className={`inline-question-img ${size === 'large' ? 'large' : size === 'medium' ? 'medium' : ''}`}
-            />
-          );
-        }
-        if (part.startsWith('**') && part.endsWith('**')) {
-          const content = part.slice(2, -2);
-          return <strong key={i}>{content}</strong>;
-        }
-        if (part.startsWith('_') && part.endsWith('_')) {
-          const content = part.slice(1, -1);
-          return <em key={i}>{content}</em>;
-        }
-        return <span key={i} style={{ whiteSpace: 'pre-wrap' }}>{part}</span>;
-      })}
-    </span>
-  );
-};
+// Helper for Certificate Predicate
 
 // Helper for Certificate Predicate
 const getPredicate = (score) => {
@@ -229,21 +110,46 @@ const Certificate = ({ userData, score }) => {
 };
 
 function App() {
-  const [view, setView] = useState('login'); // login, exam, result
-  const [userData, setUserData] = useState({ name: '', class: '', school: '' });
-  const [questions, setQuestions] = useState([]); // Questions state
-  const [isLoading, setIsLoading] = useState(true); // Loading state
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
-  const [raguState, setRaguState] = useState({});
-  const [timeLeft, setTimeLeft] = useState(3600);
-  const [fontSize, setFontSize] = useState(16);
-  const [score, setScore] = useState(0);
-  const [wrongQuestions, setWrongQuestions] = useState([]);
+  const [view, setView] = useState(() => localStorage.getItem('tka_view') || 'login');
+  const [userData, setUserData] = useState(() => {
+    const saved = localStorage.getItem('tka_userData');
+    return saved ? JSON.parse(saved) : { name: '', class: '', school: '' };
+  });
+  const [questions, setQuestions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(() => parseInt(localStorage.getItem('tka_currentIndex')) || 0);
+  const [answers, setAnswers] = useState(() => {
+    const saved = localStorage.getItem('tka_answers');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [raguState, setRaguState] = useState(() => {
+    const saved = localStorage.getItem('tka_raguState');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [timeLeft, setTimeLeft] = useState(() => parseInt(localStorage.getItem('tka_timeLeft')) || 3600);
+  const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem('tka_fontSize')) || 16);
+  const [score, setScore] = useState(() => parseInt(localStorage.getItem('tka_score')) || 0);
+  const [wrongQuestions, setWrongQuestions] = useState(() => {
+    const saved = localStorage.getItem('tka_wrongQuestions');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
+
+  // Sync state to localStorage
+  useEffect(() => {
+    localStorage.setItem('tka_view', view);
+    localStorage.setItem('tka_userData', JSON.stringify(userData));
+    localStorage.setItem('tka_currentIndex', currentIndex.toString());
+    localStorage.setItem('tka_answers', JSON.stringify(answers));
+    localStorage.setItem('tka_raguState', JSON.stringify(raguState));
+    localStorage.setItem('tka_timeLeft', timeLeft.toString());
+    localStorage.setItem('tka_fontSize', fontSize.toString());
+    localStorage.setItem('tka_score', score.toString());
+    localStorage.setItem('tka_wrongQuestions', JSON.stringify(wrongQuestions));
+  }, [view, userData, currentIndex, answers, raguState, timeLeft, fontSize, score, wrongQuestions]);
 
   // Fetch questions from API
   useEffect(() => {
@@ -258,6 +164,13 @@ function App() {
         setIsLoading(false);
       });
   }, []);
+
+  // Safety check for currentIndex
+  useEffect(() => {
+    if (questions.length > 0 && currentIndex >= questions.length) {
+      setCurrentIndex(0);
+    }
+  }, [questions, currentIndex]);
 
   useEffect(() => {
     let timer;
@@ -379,8 +292,15 @@ function App() {
     setRaguState({});
     setCurrentIndex(0);
     setTimeLeft(3600);
+    setScore(0);
+    setWrongQuestions([]);
     setView('login');
+    localStorage.clear(); // Clear all saved progress on reset
   };
+
+  if (window.location.pathname.startsWith('/admin')) {
+    return <AdminApp />;
+  }
 
   if (isLoading) {
     return (
@@ -608,109 +528,13 @@ function App() {
             </div>
           </div>
 
-          <div className={`question-content-wrapper ${currentQuestion.imagePosition === 'side' ? 'layout-side' : 'layout-stack'}`}>
-            {/* Text ABOVE Image if exists */}
-            {currentQuestion.topText && (
-              <div className="question-top-text" style={{ fontSize: `${fontSize}px` }}>
-                <MathText text={currentQuestion.topText} />
-              </div>
-            )}
-
-            {/* Image on TOP (Default) or SIDE */}
-            {(currentQuestion.image && (!currentQuestion.imagePosition || currentQuestion.imagePosition === 'top' || currentQuestion.imagePosition === 'side')) && (
-              <div className="question-image-wrapper">
-                {Array.isArray(currentQuestion.image) ? (
-                  <div className="question-images-container">
-                    {currentQuestion.image.map((img, idx) => (
-                      <img key={idx} src={`/image/${img}`} alt={`Soal ${idx + 1}`} className="question-image" />
-                    ))}
-                  </div>
-                ) : (
-                  <img src={`/image/${currentQuestion.image}`} alt="Soal" className="question-image" />
-                )}
-              </div>
-            )}
-
-            <div className="question-text" style={{ fontSize: `${fontSize}px` }}>
-              <MathText text={currentQuestion.question} />
-            </div>
-
-            {/* Image on BOTTOM */}
-            {(currentQuestion.image && currentQuestion.imagePosition === 'bottom') && (
-              <div className="question-image-wrapper">
-                {Array.isArray(currentQuestion.image) ? (
-                  <div className="question-images-container" style={{ marginTop: '20px' }}>
-                    {currentQuestion.image.map((img, idx) => (
-                      <img key={idx} src={`/image/${img}`} alt={`Soal ${idx + 1}`} className="question-image" />
-                    ))}
-                  </div>
-                ) : (
-                  <img src={`/image/${currentQuestion.image}`} alt="Soal" className="question-image" style={{ marginTop: '20px' }} />
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="options-list" style={{ fontSize: `${fontSize}px` }}>
-            {currentQuestion.type === "BS" ? (
-              <table className="bs-table">
-                <thead>
-                  <tr>
-                    <th>Pernyataan</th>
-                    <th className="center">Benar</th>
-                    <th className="center">Salah</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentQuestion.statements.map((stmt, sIdx) => (
-                    <tr key={sIdx}>
-                      <td><MathText text={stmt} /></td>
-                      <td className="center">
-                        <input
-                          type="radio"
-                          name={`stmt-${currentQuestion.id}-${sIdx}`}
-                          className="bs-radio"
-                          checked={answers[currentQuestion.id]?.[sIdx] === "Benar"}
-                          onChange={() => handleAnswerBS(sIdx, "Benar")}
-                        />
-                      </td>
-                      <td className="center">
-                        <input
-                          type="radio"
-                          name={`stmt-${currentQuestion.id}-${sIdx}`}
-                          className="bs-radio"
-                          checked={answers[currentQuestion.id]?.[sIdx] === "Salah"}
-                          onChange={() => handleAnswerBS(sIdx, "Salah")}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              currentQuestion.options.map((option, idx) => {
-                const isSelected = Array.isArray(answers[currentQuestion.id])
-                  ? answers[currentQuestion.id].includes(option)
-                  : answers[currentQuestion.id] === option;
-
-                return (
-                  <div
-                    key={idx}
-                    className={`option-item ${isSelected ? 'selected' : ''}`}
-                    onClick={() => handleAnswer(option)}
-                  >
-                    <input
-                      type={currentQuestion.type === "PGK" ? "checkbox" : "radio"}
-                      checked={isSelected}
-                      readOnly
-                      style={{ marginRight: '15px', transform: 'scale(1.2)' }}
-                    />
-                    <MathText text={option} />
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <QuestionCard
+            question={currentQuestion}
+            fontSize={fontSize}
+            answers={answers}
+            onAnswer={handleAnswer}
+            onAnswerBS={handleAnswerBS}
+          />
         </div>
 
         <div className="navigation-panel">

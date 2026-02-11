@@ -12,9 +12,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
     "docx": "^9.5.1",
     "katex": "^0.16.28",
+    "ra-data-simple-rest": "^5.14.1",
     "react": "^19.2.0",
+    "react-admin": "^5.14.1",
     "react-dom": "^19.2.0",
     "react-katex": "^3.1.0"
   },

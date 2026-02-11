@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { sequelize, Question, Option, Statement } = require('./database');
+const { sequelize, Question, Option, Statement, User } = require('./database');
 
 async function seed() {
     try {
@@ -53,6 +53,15 @@ async function seed() {
 
             console.log(`Seeded question ID: ${q.id}`);
         }
+
+        // Seed Admin User
+        await User.create({
+            username: 'admin',
+            password: 'password', // In production, hash this!
+            fullName: 'Administrator',
+            role: 'admin'
+        });
+        console.log('Seeded admin user (admin/password)');
 
         // Cleanup temp file
         fs.unlinkSync(tempFilePath);
