@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { questions } from './data/questions';
 import './index.css';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
@@ -232,6 +231,8 @@ const Certificate = ({ userData, score }) => {
 function App() {
   const [view, setView] = useState('login'); // login, exam, result
   const [userData, setUserData] = useState({ name: '', class: '', school: '' });
+  const [questions, setQuestions] = useState([]); // Questions state
+  const [isLoading, setIsLoading] = useState(true); // Loading state
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [raguState, setRaguState] = useState({});
@@ -243,6 +244,20 @@ function App() {
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
+
+  // Fetch questions from API
+  useEffect(() => {
+    fetch('http://localhost:3001/api/questions')
+      .then(res => res.json())
+      .then(data => {
+        setQuestions(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching questions:', err);
+        setIsLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     let timer;
@@ -366,6 +381,15 @@ function App() {
     setTimeLeft(3600);
     setView('login');
   };
+
+  if (isLoading) {
+    return (
+      <div className="loading-screen" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
+        <div className="loader"></div>
+        <p style={{ marginTop: '20px', fontSize: '1.2rem', fontWeight: 'bold' }}>Memuat Soal...</p>
+      </div>
+    );
+  }
 
   if (view === 'login') {
     return (
